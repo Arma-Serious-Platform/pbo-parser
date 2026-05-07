@@ -5,7 +5,7 @@ info:
 
 http:
   method: POST
-  url: http://localhost:3000/pbo/slots
+  url: http://localhost:3000/zip
   body:
     type: multipart-form
     data:

@@ -2,6 +2,7 @@ import { access, chmod, mkdir, writeFile } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import path from "node:path";
 import { promisify } from "node:util";
+import archiver, { type Archiver } from "archiver";
 import { PboArchive } from "./pbo.js";
 
 const execFileAsync = promisify(execFile);
@@ -36,6 +37,32 @@ export class PboService {
     }
 
     return outputRoot;
+  }
+
+  createZipArchiveFromPbo(pbo: PboArchive): Archiver {
+    const archive = archiver("zip", { zlib: { level: 9 } });
+
+    for (const filePath of pbo.listFiles()) {
+      const fileContent = pbo.getFileContent(filePath);
+
+      if (!fileContent) {
+        continue;
+      }
+
+      const safeRelativePath = this.sanitizeRelativePath(filePath);
+      archive.append(fileContent, { name: safeRelativePath });
+    }
+
+    archive.finalize().catch(() => {
+      // Errors are surfaced via the archive's "error" event to consumers.
+    });
+
+    return archive;
+  }
+
+  buildZipFileName(originalName: string): string {
+    const baseName = path.basename(originalName, ".pbo");
+    return `${this.sanitizeFileName(baseName)}.zip`;
   }
 
   async debinarizeMissionSqm(extractionFolder: string): Promise<DebinarizedMissionResult> {

@@ -27,7 +27,41 @@ const uploadPbo = multer({
   },
 });
 
-app.post("/pbo/slots", uploadPbo.single("pbo"), async (req, res) => {
+app.post("/zip", uploadPbo.single("pbo"), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({
+      error: 'Missing file. Please send form-data with file field "pbo".',
+    });
+  }
+
+  try {
+    const pbo = PboArchive.fromBuffer(req.file.buffer);
+    const zipFileName = pboService.buildZipFileName(req.file.originalname);
+    const archive = pboService.createZipArchiveFromPbo(pbo);
+
+    archive.on("error", (error) => {
+      if (!res.headersSent) {
+        res.status(500).json({
+          error: error instanceof Error ? error.message : "Failed to build zip archive.",
+        });
+        return;
+      }
+
+      res.destroy(error);
+    });
+
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Disposition", `attachment; filename="${zipFileName}"`);
+
+    archive.pipe(res);
+  } catch (error) {
+    res.status(400).json({
+      error: error instanceof Error ? error.message : "Failed to parse PBO archive.",
+    });
+  }
+});
+
+app.post("/slots", uploadPbo.single("pbo"), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({
       error: 'Missing file. Please send form-data with file field "pbo".',
