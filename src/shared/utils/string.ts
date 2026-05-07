@@ -30,7 +30,7 @@ const extractImagePaths = (htmlText: string): string[] => {
     paths.push(match[1]);
   }
 
-  return paths;
+  return paths.filter(Boolean) as string[];
 };
 
 export {

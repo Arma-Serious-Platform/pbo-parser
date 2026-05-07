@@ -3,3 +3,5 @@ dist
 .env
 .DS_Store
 docs/example/parse2json
+src/temp/*
+!src/temp/.gitkeep
