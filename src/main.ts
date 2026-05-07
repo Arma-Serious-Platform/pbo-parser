@@ -1,12 +1,15 @@
 import express from "express";
 import cors from "cors";
 import multer from "multer";
-import { mkdir, writeFile } from "node:fs/promises";
+import { access, chmod, mkdir, writeFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
 import path from "node:path";
+import { promisify } from "node:util";
 import { PboArchive } from "./shared/pbo.js";
 import { extractSlotGroupsFromMissionSqm } from "./shared/sqm.js";
 
 const PORT = process.env.PORT || 3000;
+const execFileAsync = promisify(execFile);
 
 const app = express();
 
@@ -46,6 +49,7 @@ app.post("/pbo/slots", uploadPbo.single("pbo"), async (req, res) => {
 
     const slots = extractSlotGroupsFromMissionSqm(mission);
     const extractionFolder = await extractPboToTempFolder(pbo, req.file.originalname);
+    const debinarizedMission = await debinarizeMissionSqm(extractionFolder);
 
     res.json({
       message: "PBO parsed successfully",
@@ -57,6 +61,7 @@ app.post("/pbo/slots", uploadPbo.single("pbo"), async (req, res) => {
       slotsCount: slots.slotsCount,
       slots: slots.slots,
       parsingMode: slots.mode,
+      debinarizedMission,
     });
   } catch (error) {
     res.status(400).json({
@@ -106,4 +111,53 @@ function sanitizeRelativePath(value: string): string {
     .map((segment) => sanitizeFileName(segment));
 
   return segments.length > 0 ? path.join(...segments) : "unknown.bin";
+}
+
+async function debinarizeMissionSqm(extractionFolder: string): Promise<{
+  status: "success" | "skipped" | "failed";
+  outputPath?: string;
+  reason?: string;
+}> {
+  const missionPath = path.join(extractionFolder, "mission.sqm");
+
+  try {
+    await access(missionPath);
+  } catch {
+    return {
+      status: "skipped",
+      reason: "mission.sqm not found in extracted files.",
+    };
+  }
+
+  if (process.platform !== "linux") {
+    return {
+      status: "skipped",
+      reason: "Debinarization requires Linux derap binary. Run API in Docker/Linux.",
+    };
+  }
+
+  const derapPath = path.resolve("src/shared/linux/bin/derap");
+  const libsPath = path.resolve("src/shared/linux/lib");
+  const outputPath = path.join(extractionFolder, "mission.debinarized.sqm");
+
+  try {
+    await chmod(derapPath, 0o755);
+    await execFileAsync(derapPath, [missionPath, outputPath], {
+      env: {
+        ...process.env,
+        LD_LIBRARY_PATH: libsPath,
+      },
+    });
+
+    await access(outputPath);
+    return {
+      status: "success",
+      outputPath,
+    };
+  } catch (error) {
+    return {
+      status: "failed",
+      reason: error instanceof Error ? error.message : "Failed to execute derap.",
+    };
+  }
 }
