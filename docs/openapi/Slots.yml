@@ -1,0 +1,22 @@
+info:
+  name: Slots
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: http://localhost:3000/pbo/slots
+  body:
+    type: multipart-form
+    data:
+      - name: pbo
+        type: file
+        value:
+          - /Users/agentos/dev/pbo-parser/example/VTG_Kunduz_Chains_143_04.kunduz_valley.pbo
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

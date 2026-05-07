@@ -17,6 +17,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc && npm run copy:assets",
+    "dev": "nodemon --exec ts-node src/main.ts",
     "copy:assets": "rsync -a --exclude='*.ts' --exclude='*.tsx' src/ dist/",
     "start": "node dist/main.js"
   },
@@ -24,6 +25,7 @@
     "@tsconfig/node22": "^22.0.5",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/multer": "^2.1.0",
     "@types/node": "^25.6.0",
     "nodemon": "^3.1.14",
     "ts-node": "^10.9.2",
