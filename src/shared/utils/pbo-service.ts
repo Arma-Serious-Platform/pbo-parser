@@ -1,4 +1,4 @@
-import { access, chmod, mkdir, writeFile } from "node:fs/promises";
+import { access, chmod, mkdir, rename, writeFile } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -86,21 +86,26 @@ export class PboService {
 
     const derapPath = path.resolve("src/shared/linux/bin/derap");
     const libsPath = path.resolve("src/shared/linux/lib");
-    const outputPath = path.join(extractionFolder, "mission.debinarized.sqm");
+    const debinarizedPath = path.join(extractionFolder, "mission.debinarized.sqm");
+    const originalBackupPath = path.join(extractionFolder, "mission-original.sqm");
 
     try {
       await chmod(derapPath, 0o755);
-      await execFileAsync(derapPath, [missionPath, outputPath], {
+      await execFileAsync(derapPath, [missionPath, debinarizedPath], {
         env: {
           ...process.env,
           LD_LIBRARY_PATH: libsPath,
         },
       });
 
-      await access(outputPath);
+      await access(debinarizedPath);
+
+      await rename(missionPath, originalBackupPath);
+      await rename(debinarizedPath, missionPath);
+
       return {
         status: "success",
-        outputPath,
+        outputPath: missionPath,
       };
     } catch (error) {
       return {

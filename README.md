@@ -10,6 +10,29 @@ Parsing pbo to extract slots, briefing, etc from any .pbo file with a mission.sq
 
 ### Using docker container
 
+Build the image from the project root:
+
+```bash
+docker build -t pbo-parser .
+```
+
+Run the container, exposing the API on port `3000`:
+
+```bash
+docker run --rm -p 3000:3000 --name pbo-parser pbo-parser
+```
+
+To override the port, set the `PORT` environment variable and map it accordingly:
+
+```bash
+docker run --rm -e PORT=8080 -p 8080:8080 --name pbo-parser pbo-parser
+```
+
 ## Usage
 
-Check the `docs/bruno`
+Check the `docs/openapi` for the endpoints example.
+The main endpoints:
+- `/zip` - Get the unpackacked PBO (and debinary mission.sqm) in zip archive, `.pbo` file required
+- `/slots` - Get the slots from a mission by `.pbo` file
+- `/briefing` - Get the briefing from a `.pbo` file
+- `/full` - Get briefing & slots in one response

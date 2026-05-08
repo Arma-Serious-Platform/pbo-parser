@@ -42,7 +42,10 @@ app.post("/zip", uploadPbo.single("pbo"), async (req, res) => {
     archive.on("error", (error) => {
       if (!res.headersSent) {
         res.status(500).json({
-          error: error instanceof Error ? error.message : "Failed to build zip archive.",
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to build zip archive.",
         });
         return;
       }
@@ -51,12 +54,16 @@ app.post("/zip", uploadPbo.single("pbo"), async (req, res) => {
     });
 
     res.setHeader("Content-Type", "application/zip");
-    res.setHeader("Content-Disposition", `attachment; filename="${zipFileName}"`);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${zipFileName}"`,
+    );
 
     archive.pipe(res);
   } catch (error) {
     res.status(400).json({
-      error: error instanceof Error ? error.message : "Failed to parse PBO archive.",
+      error:
+        error instanceof Error ? error.message : "Failed to parse PBO archive.",
     });
   }
 });
@@ -79,15 +86,18 @@ app.post("/slots", uploadPbo.single("pbo"), async (req, res) => {
     }
 
     const slots = extractSlotGroupsFromMissionSqm(mission);
-    const extractionFolder = await pboService.extractPboToTempFolder(pbo, req.file.originalname);
-    const debinarizedMission = await pboService.debinarizeMissionSqm(extractionFolder);
+    const extractionFolder = await pboService.extractPboToTempFolder(
+      pbo,
+      req.file.originalname,
+    );
+    const debinarizedMission =
+      await pboService.debinarizeMissionSqm(extractionFolder);
 
     res.json({
       message: "PBO parsed successfully",
       fileName: req.file.originalname,
       fileSize: req.file.size,
       filesCount: pbo.listFiles().length,
-      extractionFolder,
       missionSqmSize: mission.length,
       slotsCount: slots.slotsCount,
       slots: slots.slots,
@@ -96,7 +106,8 @@ app.post("/slots", uploadPbo.single("pbo"), async (req, res) => {
     });
   } catch (error) {
     res.status(400).json({
-      error: error instanceof Error ? error.message : "Failed to parse PBO archive.",
+      error:
+        error instanceof Error ? error.message : "Failed to parse PBO archive.",
     });
   }
 });

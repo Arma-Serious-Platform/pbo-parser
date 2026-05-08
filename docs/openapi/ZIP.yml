@@ -1,11 +1,11 @@
 info:
-  name: Slots
+  name: ZIP
   type: http
-  seq: 1
+  seq: 2
 
 http:
   method: POST
-  url: http://localhost:3000/slots
+  url: http://localhost:3000/zip
   body:
     type: multipart-form
     data:
