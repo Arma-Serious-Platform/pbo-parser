@@ -1,4 +1,4 @@
-import { access, chmod, mkdir, rename, writeFile } from "node:fs/promises";
+import { access, chmod, mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -13,11 +13,32 @@ export type DebinarizedMissionResult = {
   reason?: string;
 };
 
+export type ParseMissionJsonResult = {
+  status: "success" | "failed";
+  missionJSON?: Record<string, unknown>;
+  reason?: string;
+};
+
 export class PboService {
+  private readonly tempRoot = path.join("src", "temp");
+
+  constructor(private readonly clearTimeoutMs: number) {}
+
+  async clearTempFolderOnStartup(): Promise<void> {
+    await mkdir(this.tempRoot, { recursive: true });
+    const entries = await readdir(this.tempRoot);
+
+    await Promise.all(
+      entries
+        .filter((entry) => entry !== ".gitignore")
+        .map((entry) => rm(path.join(this.tempRoot, entry), { recursive: true, force: true })),
+    );
+  }
+
   async extractPboToTempFolder(pbo: PboArchive, originalName: string): Promise<string> {
     const baseName = path.basename(originalName, ".pbo");
     const folderName = `${this.sanitizeFileName(baseName)}_${Date.now()}`;
-    const outputRoot = path.join("src", "temp", folderName);
+    const outputRoot = path.join(this.tempRoot, folderName);
 
     await mkdir(outputRoot, { recursive: true });
 
@@ -36,6 +57,7 @@ export class PboService {
       await writeFile(outputPath, fileContent);
     }
 
+    this.scheduleTempFolderCleanup(outputRoot);
     return outputRoot;
   }
 
@@ -115,6 +137,32 @@ export class PboService {
     }
   }
 
+  async parseMissionSqmToJson(extractionFolder: string): Promise<ParseMissionJsonResult> {
+    const missionPath = path.join(extractionFolder, "mission.sqm");
+    const missionJsonPath = path.join(extractionFolder, "mission.json");
+    const parse2jsonPath = path.resolve("src/shared/parse2json");
+
+    try {
+      await access(missionPath);
+      await access(parse2jsonPath);
+      await chmod(parse2jsonPath, 0o755);
+
+      await execFileAsync(parse2jsonPath, [missionPath, missionJsonPath]);
+      const missionJsonRaw = await readFile(missionJsonPath, "utf8");
+      const normalizedMissionJson = this.normalizeParse2JsonOutput(missionJsonRaw);
+
+      return {
+        status: "success",
+        missionJSON: JSON.parse(normalizedMissionJson) as Record<string, unknown>,
+      };
+    } catch (error) {
+      return {
+        status: "failed",
+        reason: error instanceof Error ? error.message : "Failed to execute parse2json.",
+      };
+    }
+  }
+
   private sanitizeFileName(value: string): string {
     return value.replace(/[^a-zA-Z0-9._-]/g, "_");
   }
@@ -127,5 +175,23 @@ export class PboService {
       .map((segment) => this.sanitizeFileName(segment));
 
     return segments.length > 0 ? path.join(...segments) : "unknown.bin";
+  }
+
+  private normalizeParse2JsonOutput(raw: string): string {
+    return raw
+      .replace(/\uFEFF/g, "")
+      .replace(/^\{\/{10,}/, "{");
+  }
+
+  private scheduleTempFolderCleanup(folderPath: string): void {
+    if (!Number.isFinite(this.clearTimeoutMs) || this.clearTimeoutMs < 0) {
+      return;
+    }
+
+    setTimeout(() => {
+      rm(folderPath, { recursive: true, force: true }).catch(() => {
+        // Ignore cleanup errors to avoid impacting requests.
+      });
+    }, this.clearTimeoutMs);
   }
 }
