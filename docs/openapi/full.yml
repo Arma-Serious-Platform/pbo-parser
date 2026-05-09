@@ -1,0 +1,22 @@
+info:
+  name: full
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: http://localhost:3000/full
+  body:
+    type: multipart-form
+    data:
+      - name: pbo
+        type: file
+        value:
+          - /home/agentos/dev/pbo-parser/docs/example/VTG_Kunduz_Chains_143_04.kunduz_valley.pbo
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

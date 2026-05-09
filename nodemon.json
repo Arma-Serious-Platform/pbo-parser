@@ -1,0 +1,8 @@
+{
+    "ignore": [
+      "src/temp/*",
+      "dist/*",
+      "node_modules/*",
+      "docs/*"
+    ]
+  }

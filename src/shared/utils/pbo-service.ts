@@ -1,4 +1,13 @@
-import { access, chmod, mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import {
+  access,
+  chmod,
+  mkdir,
+  readdir,
+  readFile,
+  rename,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { execFile } from "node:child_process";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -30,12 +39,17 @@ export class PboService {
 
     await Promise.all(
       entries
-        .filter((entry) => entry !== ".gitignore")
-        .map((entry) => rm(path.join(this.tempRoot, entry), { recursive: true, force: true })),
+        .filter((entry) => entry !== ".gitkeep")
+        .map((entry) =>
+          rm(path.join(this.tempRoot, entry), { recursive: true, force: true }),
+        ),
     );
   }
 
-  async extractPboToTempFolder(pbo: PboArchive, originalName: string): Promise<string> {
+  async extractPboToTempFolder(
+    pbo: PboArchive,
+    originalName: string,
+  ): Promise<string> {
     const baseName = path.basename(originalName, ".pbo");
     const folderName = `${this.sanitizeFileName(baseName)}_${Date.now()}`;
     const outputRoot = path.join(this.tempRoot, folderName);
@@ -87,7 +101,9 @@ export class PboService {
     return `${this.sanitizeFileName(baseName)}.zip`;
   }
 
-  async debinarizeMissionSqm(extractionFolder: string): Promise<DebinarizedMissionResult> {
+  async debinarizeMissionSqm(
+    extractionFolder: string,
+  ): Promise<DebinarizedMissionResult> {
     const missionPath = path.join(extractionFolder, "mission.sqm");
 
     try {
@@ -102,14 +118,21 @@ export class PboService {
     if (process.platform !== "linux") {
       return {
         status: "skipped",
-        reason: "Debinarization requires Linux derap binary. Run API in Docker/Linux.",
+        reason:
+          "Debinarization requires Linux derap binary. Run API in Docker/Linux.",
       };
     }
 
     const derapPath = path.resolve("src/shared/linux/bin/derap");
     const libsPath = path.resolve("src/shared/linux/lib");
-    const debinarizedPath = path.join(extractionFolder, "mission.debinarized.sqm");
-    const originalBackupPath = path.join(extractionFolder, "mission-original.sqm");
+    const debinarizedPath = path.join(
+      extractionFolder,
+      "mission.debinarized.sqm",
+    );
+    const originalBackupPath = path.join(
+      extractionFolder,
+      "mission-original.sqm",
+    );
 
     try {
       await chmod(derapPath, 0o755);
@@ -132,12 +155,15 @@ export class PboService {
     } catch (error) {
       return {
         status: "failed",
-        reason: error instanceof Error ? error.message : "Failed to execute derap.",
+        reason:
+          error instanceof Error ? error.message : "Failed to execute derap.",
       };
     }
   }
 
-  async parseMissionSqmToJson(extractionFolder: string): Promise<ParseMissionJsonResult> {
+  async parseMissionSqmToJson(
+    extractionFolder: string,
+  ): Promise<ParseMissionJsonResult> {
     const missionPath = path.join(extractionFolder, "mission.sqm");
     const missionJsonPath = path.join(extractionFolder, "mission.json");
     const parse2jsonPath = path.resolve("src/shared/parse2json");
@@ -149,16 +175,23 @@ export class PboService {
 
       await execFileAsync(parse2jsonPath, [missionPath, missionJsonPath]);
       const missionJsonRaw = await readFile(missionJsonPath, "utf8");
-      const normalizedMissionJson = this.normalizeParse2JsonOutput(missionJsonRaw);
+      const normalizedMissionJson =
+        this.normalizeParse2JsonOutput(missionJsonRaw);
 
       return {
         status: "success",
-        missionJSON: JSON.parse(normalizedMissionJson) as Record<string, unknown>,
+        missionJSON: JSON.parse(normalizedMissionJson) as Record<
+          string,
+          unknown
+        >,
       };
     } catch (error) {
       return {
         status: "failed",
-        reason: error instanceof Error ? error.message : "Failed to execute parse2json.",
+        reason:
+          error instanceof Error
+            ? error.message
+            : "Failed to execute parse2json.",
       };
     }
   }
@@ -171,16 +204,16 @@ export class PboService {
     const normalized = value.replaceAll("\\", "/").replace(/^\/+/, "");
     const segments = normalized
       .split("/")
-      .filter((segment) => segment !== "" && segment !== "." && segment !== "..")
+      .filter(
+        (segment) => segment !== "" && segment !== "." && segment !== "..",
+      )
       .map((segment) => this.sanitizeFileName(segment));
 
     return segments.length > 0 ? path.join(...segments) : "unknown.bin";
   }
 
   private normalizeParse2JsonOutput(raw: string): string {
-    return raw
-      .replace(/\uFEFF/g, "")
-      .replace(/^\{\/{10,}/, "{");
+    return raw.replace(/\uFEFF/g, "").replace(/^\{\/{10,}/, "{");
   }
 
   private scheduleTempFolderCleanup(folderPath: string): void {
