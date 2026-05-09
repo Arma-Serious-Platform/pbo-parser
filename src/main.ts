@@ -3,11 +3,15 @@ import cors from "cors";
 import multer from "multer";
 import { PboArchive } from "./shared/utils/pbo.js";
 import { PboService } from "./shared/utils/pbo-service.js";
+import dotenv from "dotenv";
+
 import {
   getGroupsFromMission,
   getVehiclesFromMission,
   parseMissionFromUpload,
 } from "./shared/utils/mission.js";
+
+dotenv.config();
 
 const PORT = process.env.PORT || 3000;
 const clearTimeoutMs = parseClearTimeoutMs(process.env.CLEAR_TIMEOUT_MS);

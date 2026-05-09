@@ -12,6 +12,7 @@ import { execFile } from "node:child_process";
 import path from "node:path";
 import { promisify } from "node:util";
 import archiver, { type Archiver } from "archiver";
+import { PaaWebpConverter } from "./paa.js";
 import { PboArchive } from "./pbo.js";
 
 const execFileAsync = promisify(execFile);
@@ -30,6 +31,7 @@ export type ParseMissionJsonResult = {
 
 export class PboService {
   private readonly tempRoot = path.join("src", "temp");
+  private readonly paaWebp = new PaaWebpConverter();
 
   constructor(private readonly clearTimeoutMs: number) {}
 
@@ -69,6 +71,10 @@ export class PboService {
 
       await mkdir(parentDir, { recursive: true });
       await writeFile(outputPath, fileContent);
+
+      if (PaaWebpConverter.isPaaFilePath(outputPath)) {
+        await this.paaWebp.tryWriteWebpBesidePaa(outputPath, fileContent);
+      }
     }
 
     this.scheduleTempFolderCleanup(outputRoot);
