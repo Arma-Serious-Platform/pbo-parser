@@ -6,7 +6,7 @@ import type {
   MissionGroup,
   MissionUnit,
   MissionVehicle,
-} from "../../types/mission.js";
+} from "../types/mission.js";
 
 export type ParseMissionResult = {
   filesCount: number;
@@ -14,6 +14,17 @@ export type ParseMissionResult = {
   missionJSON: JsonObject | null;
   missionJSONError: string | null;
 };
+
+type Side =
+  | "West"
+  | "East"
+  | "Independent"
+  | "Civilian"
+  | "Empty"
+  | "BLUFOR"
+  | "OPFOR"
+  | "Logic"
+  | "Unknown";
 
 export async function parseMissionFromUpload(
   pboService: PboService,
@@ -79,7 +90,7 @@ export function getGroupsFromMission(missionJSON: JsonObject): MissionGroup[] {
 
     groups.push({
       id: toId(entity.id),
-      side: toStringOrNull(entity.side),
+      side: toStringOrNull(entity.side) as Side,
       units: getUnitsFromGroupEntity(toEntityMap(entity.Entities)),
     });
   }
