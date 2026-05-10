@@ -1,12 +1,387 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PBO Parser</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" sizes="32x32" href="https://arma-plan-maker.com/favicon-32x32.png">
+    <title>PBO parser</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-</head>
-<body>
-    
-</body>
+  </head>
+  <body class="relative min-h-screen text-slate-100 antialiased">
+    <div
+      aria-hidden="true"
+      class="pointer-events-none fixed inset-0 -z-20 bg-slate-950 bg-cover bg-center bg-no-repeat"
+      style="
+        background-image: url('https://arma-plan-maker.com/background.webp');
+      "
+    ></div>
+    <div
+      aria-hidden="true"
+      class="pointer-events-none fixed inset-0 -z-10 bg-gradient-to-b from-slate-950/85 via-slate-950/80 to-slate-950/90"
+    ></div>
+
+    <div class="relative z-0 mx-auto max-w-3xl px-4 py-10">
+      <header class="mb-8 flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-8">
+        <div class="shrink-0">
+          <img
+            src="https://arma-plan-maker.com/_next/image?url=%2Fa3-logo.png&amp;w=256&amp;q=75"
+            width="256"
+            height="64"
+            alt="Arma 3"
+            class="h-12 w-auto max-w-[min(100%,14rem)] object-contain drop-shadow-md sm:h-14"
+            decoding="async"
+            fetchpriority="high"
+          />
+        </div>
+        <div class="min-w-0">
+          <h1 class="text-2xl font-semibold tracking-tight text-white drop-shadow-sm">
+            PBO parser
+          </h1>
+          <p class="mt-1 text-sm text-slate-300 drop-shadow-sm">
+            Upload a mission <span class="font-mono text-slate-200">.pbo</span> and
+            download a zip of its contents or inspect API responses.
+          </p>
+        </div>
+      </header>
+
+      <section
+        class="rounded-xl border border-slate-700/80 bg-slate-900/75 p-5 shadow-lg backdrop-blur-sm"
+      >
+        <input
+          id="pbo-input"
+          type="file"
+          accept=".pbo,application/octet-stream"
+          class="sr-only"
+        />
+
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0 flex-1 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+            <button
+              type="button"
+              id="pick-file"
+              class="inline-flex w-fit cursor-pointer items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 focus:ring-offset-slate-900"
+            >
+              Choose .pbo file
+            </button>
+            <p id="file-label" class="min-w-0 truncate text-sm text-slate-400 sm:flex-1">
+              No file selected
+            </p>
+          </div>
+          <button
+            type="button"
+            id="btn-clear-file"
+            disabled
+            class="inline-flex shrink-0 cursor-pointer items-center justify-center rounded-lg border border-red-600 bg-red-600 px-3 py-2 text-sm font-medium text-white shadow hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:cursor-not-allowed disabled:border-red-800 disabled:bg-red-800 disabled:opacity-50 disabled:hover:bg-red-800"
+          >
+            Clear file
+          </button>
+        </div>
+
+        <p id="validation-msg" class="mt-3 hidden text-sm text-red-400"></p>
+      </section>
+
+      <section class="mt-6 space-y-3">
+        <h2 class="text-xs font-medium uppercase tracking-wide text-slate-400">
+          Actions
+        </h2>
+        <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <button
+            type="button"
+            id="btn-zip"
+            disabled
+            class="cursor-pointer rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm font-medium text-slate-100 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Download extracted PBO (ZIP)
+          </button>
+          <button
+            type="button"
+            id="btn-slots"
+            disabled
+            class="cursor-pointer rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm font-medium text-slate-100 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Get slots response
+          </button>
+          <button
+            type="button"
+            id="btn-full"
+            disabled
+            class="cursor-pointer rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm font-medium text-slate-100 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Get full response
+          </button>
+        </div>
+      </section>
+
+      <section id="output-slots" class="mt-8 hidden">
+        <div class="mb-2 flex items-center justify-between gap-2">
+          <h2 class="text-sm font-medium text-slate-300">Slots response</h2>
+          <button
+            type="button"
+            data-copy-target="slots"
+            class="cursor-pointer rounded-md border border-slate-600 px-3 py-1 text-xs font-medium text-slate-200 hover:bg-slate-800"
+          >
+            Copy
+          </button>
+        </div>
+        <pre
+          class="max-h-[28rem] overflow-auto rounded-lg border border-slate-800/90 bg-slate-950/90 p-4 text-xs leading-relaxed text-emerald-200/90 backdrop-blur-sm"
+        ><code id="code-slots"></code></pre>
+      </section>
+
+      <section id="output-full" class="mt-8 hidden">
+        <div class="mb-2 flex items-center justify-between gap-2">
+          <h2 class="text-sm font-medium text-slate-300">Full response</h2>
+          <button
+            type="button"
+            data-copy-target="full"
+            class="cursor-pointer rounded-md border border-slate-600 px-3 py-1 text-xs font-medium text-slate-200 hover:bg-slate-800"
+          >
+            Copy
+          </button>
+        </div>
+        <pre
+          class="max-h-[28rem] overflow-auto rounded-lg border border-slate-800/90 bg-slate-950/90 p-4 text-xs leading-relaxed text-emerald-200/90 backdrop-blur-sm"
+        ><code id="code-full"></code></pre>
+      </section>
+
+      <p id="toast" class="pointer-events-none fixed bottom-6 left-1/2 z-50 hidden -translate-x-1/2 rounded-full bg-slate-800 px-4 py-2 text-sm text-slate-100 shadow-lg ring-1 ring-slate-600"></p>
+    </div>
+
+    <script>
+      (function () {
+        const input = document.getElementById("pbo-input");
+        const pickBtn = document.getElementById("pick-file");
+        const btnClearFile = document.getElementById("btn-clear-file");
+        const fileLabel = document.getElementById("file-label");
+        const validationMsg = document.getElementById("validation-msg");
+        const btnZip = document.getElementById("btn-zip");
+        const btnSlots = document.getElementById("btn-slots");
+        const btnFull = document.getElementById("btn-full");
+        const codeSlots = document.getElementById("code-slots");
+        const codeFull = document.getElementById("code-full");
+        const outSlots = document.getElementById("output-slots");
+        const outFull = document.getElementById("output-full");
+        const toast = document.getElementById("toast");
+
+        /** @type {File | null} */
+        let selectedFile = null;
+        let slotsText = "";
+        let fullText = "";
+
+        function showToast(message) {
+          toast.textContent = message;
+          toast.classList.remove("hidden");
+          clearTimeout(showToast._t);
+          showToast._t = setTimeout(function () {
+            toast.classList.add("hidden");
+          }, 2200);
+        }
+
+        function isValidPboFile(file) {
+          if (!file || !(file instanceof File)) return false;
+          const name = file.name.toLowerCase();
+          if (!name.endsWith(".pbo")) return false;
+          return true;
+        }
+
+        function setValidation(message) {
+          if (!message) {
+            validationMsg.classList.add("hidden");
+            validationMsg.textContent = "";
+            updateClearFileButton();
+            return;
+          }
+          validationMsg.textContent = message;
+          validationMsg.classList.remove("hidden");
+          updateClearFileButton();
+        }
+
+        function updateActions() {
+          const ok = isValidPboFile(selectedFile);
+          btnZip.disabled = !ok;
+          btnSlots.disabled = !ok;
+          btnFull.disabled = !ok;
+        }
+
+        function updateClearFileButton() {
+          const hasInvalidMessage = !validationMsg.classList.contains("hidden");
+          const hasInputFiles = !!(input.files && input.files.length > 0);
+          btnClearFile.disabled =
+            !selectedFile && !hasInvalidMessage && !hasInputFiles;
+        }
+
+        function setSelectedFile(file) {
+          selectedFile = file && isValidPboFile(file) ? file : null;
+          if (file && !isValidPboFile(file)) {
+            fileLabel.textContent = file.name || "Invalid file";
+            setValidation('Only files ending with ".pbo" are allowed.');
+          } else if (selectedFile) {
+            fileLabel.textContent =
+              selectedFile.name +
+              " (" +
+              formatSize(selectedFile.size) +
+              ")";
+            setValidation("");
+          } else {
+            fileLabel.textContent = "No file selected";
+            setValidation("");
+          }
+          updateActions();
+          updateClearFileButton();
+        }
+
+        function formatSize(bytes) {
+          if (bytes < 1024) return bytes + " B";
+          if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+          return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+        }
+
+        pickBtn.addEventListener("click", function () {
+          input.click();
+        });
+
+        btnClearFile.addEventListener("click", function () {
+          input.value = "";
+          slotsText = "";
+          fullText = "";
+          codeSlots.textContent = "";
+          codeFull.textContent = "";
+          outSlots.classList.add("hidden");
+          outFull.classList.add("hidden");
+          setSelectedFile(null);
+          showToast("File cleared");
+        });
+
+        input.addEventListener("change", function () {
+          const file = input.files && input.files[0];
+          setSelectedFile(file || null);
+        });
+
+        input.addEventListener("dragover", function (e) {
+          e.preventDefault();
+        });
+        document.body.addEventListener("dragover", function (e) {
+          e.preventDefault();
+        });
+        document.body.addEventListener("drop", function (e) {
+          e.preventDefault();
+          const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+          if (f) {
+            try {
+              var dt = new DataTransfer();
+              dt.items.add(f);
+              input.files = dt.files;
+            } catch (_) {}
+            setSelectedFile(f);
+          }
+        });
+
+        function formDataWithPbo() {
+          const fd = new FormData();
+          fd.append("pbo", selectedFile, selectedFile.name);
+          return fd;
+        }
+
+        function parseFilenameFromContentDisposition(header) {
+          if (!header) return null;
+          const m = /filename\*?=(?:UTF-8'')?["']?([^"';]+)["']?/i.exec(header);
+          return m ? decodeURIComponent(m[1].trim()) : null;
+        }
+
+        btnZip.addEventListener("click", async function () {
+          if (!selectedFile) return;
+          btnZip.disabled = true;
+          try {
+            const res = await fetch("/zip", {
+              method: "POST",
+              body: formDataWithPbo(),
+            });
+            if (!res.ok) {
+              let errText = res.statusText;
+              try {
+                const j = await res.json();
+                if (j && j.error) errText = j.error;
+              } catch (_) {}
+              throw new Error(errText);
+            }
+            const blob = await res.blob();
+            const cd = res.headers.get("Content-Disposition");
+            const name =
+              parseFilenameFromContentDisposition(cd) ||
+              selectedFile.name.replace(/\.pbo$/i, "") + ".zip";
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = name;
+            a.rel = "noopener";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+            showToast("ZIP download started");
+          } catch (e) {
+            showToast(e.message || "ZIP request failed");
+          } finally {
+            updateActions();
+          }
+        });
+
+        async function fetchJsonDisplay(url, codeEl, outSection, storeRef) {
+          if (!selectedFile) return;
+          codeEl.textContent = "Loading…";
+          outSection.classList.remove("hidden");
+          try {
+            const res = await fetch(url, {
+              method: "POST",
+              body: formDataWithPbo(),
+            });
+            const text = await res.text();
+            let display = text;
+            try {
+              display = JSON.stringify(JSON.parse(text), null, 2);
+            } catch (_) {}
+            codeEl.textContent = display;
+            storeRef(display);
+            if (!res.ok) {
+              showToast("Error: " + (res.status || "") + " — see response body");
+            }
+          } catch (e) {
+            const msg = e.message || String(e);
+            codeEl.textContent = msg;
+            storeRef(msg);
+            showToast("Request failed");
+          }
+        }
+
+        btnSlots.addEventListener("click", function () {
+          fetchJsonDisplay("/slots", codeSlots, outSlots, function (t) {
+            slotsText = t;
+          });
+        });
+
+        btnFull.addEventListener("click", function () {
+          fetchJsonDisplay("/full", codeFull, outFull, function (t) {
+            fullText = t;
+          });
+        });
+
+        document.querySelectorAll("[data-copy-target]").forEach(function (btn) {
+          btn.addEventListener("click", async function () {
+            const which = btn.getAttribute("data-copy-target");
+            const text = which === "full" ? fullText : slotsText;
+            if (!text) {
+              showToast("Nothing to copy yet");
+              return;
+            }
+            try {
+              await navigator.clipboard.writeText(text);
+              showToast("Copied to clipboard");
+            } catch (_) {
+              showToast("Copy failed — select text manually");
+            }
+          });
+        });
+      })();
+    </script>
+  </body>
 </html>

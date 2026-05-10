@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import multer from "multer";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { PboArchive } from "./shared/utils/pbo.js";
 import { PboService } from "./shared/utils/pbo-service.js";
 import dotenv from "dotenv";
@@ -13,6 +15,9 @@ import {
 
 dotenv.config();
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const viewDir = path.join(__dirname, "view");
+
 const PORT = process.env.PORT || 3000;
 const clearTimeoutMs = parseClearTimeoutMs(process.env.CLEAR_TIMEOUT_MS);
 const pboService = new PboService(clearTimeoutMs);
@@ -24,6 +29,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(cors());
+
+app.use(express.static(viewDir));
 
 const uploadPbo = multer({
   storage: multer.memoryStorage(),
