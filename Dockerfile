@@ -1,4 +1,6 @@
-FROM node:22-bookworm-slim AS builder
+# syntax=docker/dockerfile:1
+# Builder uses the build machine arch (fast npm/tsc). Runner is amd64: `derap` and `parse2json` are x86-64 ELFs.
+FROM --platform=$BUILDPLATFORM node:22-bookworm-slim AS builder
 
 WORKDIR /app
 
@@ -11,7 +13,7 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM node:22-bookworm-slim AS runner
+FROM --platform=linux/amd64 node:22-bookworm-slim AS runner
 
 WORKDIR /app
 
