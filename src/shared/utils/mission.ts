@@ -4,6 +4,7 @@ import type {
   EntityMap,
   JsonObject,
   MissionGroup,
+  MissionSlotsBySide,
   MissionUnit,
   MissionVehicle,
 } from "../types/mission.js";
@@ -98,7 +99,75 @@ export function getGroupsFromMission(missionJSON: JsonObject): MissionGroup[] {
   return groups;
 }
 
-export function getSlotsFromMission(missionGroups: MissionGroup[]) {}
+/**
+ * Yields callsigns Alpha 1-1, Alpha 1-2, … Alpha 1-6, Alpha 2-1, … (same pattern as Arma-style naming).
+ */
+function createCallsignGenerator(): () => string {
+  let squad = 1;
+  let position = 0;
+  return () => {
+    position++;
+    if (position > 6) {
+      position = 1;
+      squad++;
+    }
+    return `Alpha ${squad}-${position}`;
+  };
+}
+
+function sideToSlotsKey(side: string | null): string {
+  if (!side) {
+    return "unknown";
+  }
+  switch (side) {
+    case "West":
+    case "BLUFOR":
+      return "west";
+    case "East":
+    case "OPFOR":
+      return "east";
+    case "Independent":
+      return "independent";
+    case "Civilian":
+      return "civilian";
+    case "Empty":
+      return "empty";
+    case "Logic":
+      return "logic";
+    default:
+      return side.replace(/\s+/g, "_").toLowerCase();
+  }
+}
+
+export function getSlotsFromMission(
+  missionGroups: MissionGroup[],
+): MissionSlotsBySide {
+  const nextCallsign = createCallsignGenerator();
+  const slots: MissionSlotsBySide = {};
+
+  for (const group of missionGroups) {
+    const playable = group.units.filter((u) => u.isPlayable);
+    if (playable.length === 0) {
+      continue;
+    }
+
+    const key = sideToSlotsKey(group.side);
+    if (!slots[key]) {
+      slots[key] = [];
+    }
+
+    slots[key].push({
+      callsign: nextCallsign(),
+      count: playable.length,
+      units: playable.map((u) => ({
+        id: u.id,
+        name: u.description ?? "",
+      })),
+    });
+  }
+
+  return slots;
+}
 
 function getUnitsFromGroupEntity(entities: EntityMap): MissionUnit[] {
   const units: MissionUnit[] = [];

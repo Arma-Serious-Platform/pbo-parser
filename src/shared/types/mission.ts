@@ -39,3 +39,19 @@ export type MissionVehicle = {
     angle: number;
   };
 };
+
+/** Playable slot group under a faction key (e.g. west, east). */
+export type MissionSlotGroup = {
+  callsign: string;
+  count: number;
+  units: MissionSlotUnit[];
+};
+
+export type MissionSlotUnit = {
+  id: string | number | null;
+  /** From unit `description` in mission data. */
+  name: string;
+};
+
+/** Side key → playable groups only (units filtered with isPlayable: true). */
+export type MissionSlotsBySide = Record<string, MissionSlotGroup[]>;

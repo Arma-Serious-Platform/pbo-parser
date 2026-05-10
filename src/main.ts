@@ -9,6 +9,7 @@ import dotenv from "dotenv";
 
 import {
   getGroupsFromMission,
+  getSlotsFromMission,
   getVehiclesFromMission,
   parseMissionFromUpload,
 } from "./shared/utils/mission.js";
@@ -100,17 +101,14 @@ app.post("/slots", uploadPbo.single("pbo"), async (req, res) => {
     const groups = parseResult.missionJSON
       ? getGroupsFromMission(parseResult.missionJSON)
       : [];
-    const vehicles = parseResult.missionJSON
-      ? getVehiclesFromMission(parseResult.missionJSON)
-      : [];
+    const slots = getSlotsFromMission(groups);
 
     res.json({
       message: "PBO parsed successfully",
       fileName: req.file.originalname,
       fileSize: req.file.size,
       filesCount: parseResult.filesCount,
-      groups,
-      vehicles,
+      slots,
     });
   } catch (error) {
     res.status(400).json({
