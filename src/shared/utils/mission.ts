@@ -115,6 +115,65 @@ function createCallsignGenerator(): () => string {
   };
 }
 
+/** Matches @Alpha 2-3 or @Альфа 2-3 (Latin or Cyrillic “Alpha”) in unit descriptions. */
+const MANUAL_CALLSIGN_IN_DESCRIPTION =
+  /@(?:[Aa]lpha|Альфа|альфа)\s*(\d+)\s*-\s*(\d+)/;
+
+/**
+ * If the first playable unit encodes a callsign (e.g. …@Alpha 2-3… or …@Альфа 2-3…), return `Alpha 2-3`.
+ */
+function extractManualCallsignFromDescription(
+  description: string | null,
+): string | null {
+  if (!description) {
+    return null;
+  }
+  const match = MANUAL_CALLSIGN_IN_DESCRIPTION.exec(description);
+  if (!match) {
+    return null;
+  }
+  const squad = Number.parseInt(match[1] ?? "", 10);
+  const pos = Number.parseInt(match[2] ?? "", 10);
+  if (!Number.isFinite(squad) || !Number.isFinite(pos)) {
+    return null;
+  }
+  return `Alpha ${squad}-${pos}`;
+}
+
+function parseCallsignSortKey(
+  callsign: string,
+): { squad: number; pos: number } | null {
+  const m = /^Alpha\s+(\d+)-(\d+)$/i.exec(callsign.trim());
+  if (!m) {
+    return null;
+  }
+  const squad = Number.parseInt(m[1] ?? "", 10);
+  const pos = Number.parseInt(m[2] ?? "", 10);
+  if (!Number.isFinite(squad) || !Number.isFinite(pos)) {
+    return null;
+  }
+  return { squad, pos };
+}
+
+/** Lower squad/position first (e.g. Alpha 1-1 before Alpha 5-6). */
+function compareCallsignAsc(a: string, b: string): number {
+  const pa = parseCallsignSortKey(a);
+  const pb = parseCallsignSortKey(b);
+  if (pa && pb) {
+    if (pa.squad !== pb.squad) {
+      return pa.squad - pb.squad;
+    }
+    return pa.pos - pb.pos;
+  }
+  if (pa && !pb) {
+    return -1;
+  }
+  if (!pa && pb) {
+    return 1;
+  }
+  return a.localeCompare(b);
+}
+
 function sideToSlotsKey(side: string | null): string {
   if (!side) {
     return "unknown";
@@ -156,14 +215,27 @@ export function getSlotsFromMission(
       slots[key] = [];
     }
 
+    const firstPlayable = playable[0];
+    const manualCallsign = extractManualCallsignFromDescription(
+      firstPlayable?.description ?? null,
+    );
+    const callsign = manualCallsign ?? nextCallsign();
+
     slots[key].push({
-      callsign: nextCallsign(),
+      callsign,
       count: playable.length,
       units: playable.map((u) => ({
         id: u.id,
         name: u.description ?? "",
       })),
     });
+  }
+
+  for (const key of Object.keys(slots)) {
+    const list = slots[key];
+    if (list) {
+      list.sort((x, y) => compareCallsignAsc(x.callsign, y.callsign));
+    }
   }
 
   return slots;
