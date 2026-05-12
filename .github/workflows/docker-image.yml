@@ -8,10 +8,6 @@ on:
         required: false
         default: ""
 
-permissions:
-  contents: read
-  packages: write
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -23,12 +19,11 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to GitHub Container Registry
+      - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -38,8 +33,8 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            ghcr.io/arma-serious-platform/pbo-parser:main
-            ghcr.io/arma-serious-platform/pbo-parser:${{ github.sha }}
-            ${{ inputs.tag != '' && format('ghcr.io/arma-serious-platform/pbo-parser:{0}', inputs.tag) || '' }}
+            agentos/pbo-parser:main
+            agentos/pbo-parser:${{ github.sha }}
+            ${{ inputs.tag != '' && format('agentos/pbo-parser:{0}', inputs.tag) || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
