@@ -34,5 +34,7 @@ Check the `docs/openapi` for the endpoints example.
 The main endpoints:
 - `/zip` - Get the unpackacked PBO (and debinary mission.sqm) in zip archive, `.pbo` file required
 - `/slots` - Get the slots from a mission by `.pbo` file
-- `/briefing` - Get the briefing from a `.pbo` file
 - `/full` - Get briefing & slots in one response
+
+## TODO:
+- `/briefing` - Get the briefing from a `.pbo` file
