@@ -28,6 +28,20 @@ To override the port, set the `PORT` environment variable and map it accordingly
 docker run --rm -e PORT=8080 -p 8080:8080 --name pbo-parser pbo-parser
 ```
 
+### ARM VPS: `exec format error`
+
+The image is **linux/amd64** (native Arma tooling is x86-64). On an **aarch64** VPS, Docker must use QEMU; without it, startup fails with `exec format error` on the entrypoint or `node`.
+
+1. On the VPS, install binfmt handlers (once per host):
+
+   ```bash
+   docker run --privileged --rm tonistiigi/binfmt --install all
+   ```
+
+2. Ensure Compose or `docker run` uses the amd64 image, e.g. `--platform linux/amd64`, then recreate the container.
+
+3. Prefer an **x86_64** VPS if you want native speed without emulation.
+
 ## Usage
 
 Check the `docs/openapi` for the endpoints example.
