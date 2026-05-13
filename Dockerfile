@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1
-# Builder uses the build machine arch (fast npm/tsc). Runner is amd64: `derap` and `parse2json` are x86-64 ELFs.
-FROM --platform=$BUILDPLATFORM node:22-bookworm-slim AS builder
+# Builder and runner are amd64 so the image is the same on every host; on non-amd64 machines use
+# `docker buildx build --platform linux/amd64` (QEMU). `derap` and `parse2json` are x86-64 ELFs.
+FROM --platform=linux/amd64 node:22-bookworm-slim AS builder
 
 WORKDIR /app
 
