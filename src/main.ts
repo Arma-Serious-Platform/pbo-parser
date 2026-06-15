@@ -54,7 +54,11 @@ app.post("/zip", uploadPbo.single("pbo"), async (req, res) => {
   try {
     const pbo = PboArchive.fromBuffer(req.file.buffer);
     const zipFileName = pboService.buildZipFileName(req.file.originalname);
-    const archive = pboService.createZipArchiveFromPbo(pbo);
+    const archive =
+      await pboService.createZipArchiveFromPboWithDebinarizedMission(
+        pbo,
+        req.file.originalname,
+      );
 
     archive.on("error", (error) => {
       if (!res.headersSent) {

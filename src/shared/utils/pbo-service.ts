@@ -9,6 +9,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { execFile } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { promisify } from "node:util";
 import archiver, { type Archiver } from "archiver";
@@ -16,6 +17,7 @@ import { PaaWebpConverter } from "./paa.js";
 import { PboArchive } from "./pbo.js";
 
 const execFileAsync = promisify(execFile);
+const ZIP_DEBINARIZED_MISSION_NAME = "deb-mission.sqm";
 
 export type DebinarizedMissionResult = {
   status: "success" | "skipped" | "failed";
@@ -81,7 +83,10 @@ export class PboService {
     return outputRoot;
   }
 
-  createZipArchiveFromPbo(pbo: PboArchive): Archiver {
+  createZipArchiveFromPbo(
+    pbo: PboArchive,
+    extraFiles: Array<{ name: string; content: Buffer }> = [],
+  ): Archiver {
     const archive = archiver("zip", { zlib: { level: 9 } });
 
     for (const filePath of pbo.listFiles()) {
@@ -95,11 +100,32 @@ export class PboService {
       archive.append(fileContent, { name: safeRelativePath });
     }
 
+    for (const file of extraFiles) {
+      archive.append(file.content, {
+        name: this.sanitizeRelativePath(file.name),
+      });
+    }
+
     archive.finalize().catch(() => {
       // Errors are surfaced via the archive's "error" event to consumers.
     });
 
     return archive;
+  }
+
+  async createZipArchiveFromPboWithDebinarizedMission(
+    pbo: PboArchive,
+    originalName: string,
+  ): Promise<Archiver> {
+    const debinarizedMission = await this.createDebinarizedMissionZipEntry(
+      pbo,
+      originalName,
+    );
+
+    return this.createZipArchiveFromPbo(
+      pbo,
+      debinarizedMission ? [debinarizedMission] : [],
+    );
   }
 
   buildZipFileName(originalName: string): string {
@@ -199,6 +225,39 @@ export class PboService {
             ? error.message
             : "Failed to execute parse2json.",
       };
+    }
+  }
+
+  private async createDebinarizedMissionZipEntry(
+    pbo: PboArchive,
+    originalName: string,
+  ): Promise<{ name: string; content: Buffer } | null> {
+    const missionContent = pbo.getFileContent("mission.sqm");
+    if (!missionContent) {
+      return null;
+    }
+
+    const baseName = path.basename(originalName, ".pbo");
+    const outputRoot = path.join(
+      this.tempRoot,
+      `${this.sanitizeFileName(baseName)}_${Date.now()}_${randomUUID()}_zip`,
+    );
+
+    try {
+      await mkdir(outputRoot, { recursive: true });
+      await writeFile(path.join(outputRoot, "mission.sqm"), missionContent);
+
+      const result = await this.debinarizeMissionSqm(outputRoot);
+      if (result.status !== "success" || !result.outputPath) {
+        return null;
+      }
+
+      return {
+        name: ZIP_DEBINARIZED_MISSION_NAME,
+        content: await readFile(result.outputPath),
+      };
+    } finally {
+      await rm(outputRoot, { recursive: true, force: true });
     }
   }
 
