@@ -71,11 +71,10 @@ export async function parseMissionFromUpload(
 }
 
 export function getGroupsFromMission(missionJSON: JsonObject): MissionGroup[] {
-  const entities = getMissionEntities(missionJSON);
-  if (!entities) {
-    return [];
-  }
+  return getGroupsFromEntities(getMissionEntities(missionJSON));
+}
 
+function getGroupsFromEntities(entities: EntityMap): MissionGroup[] {
   const groups: MissionGroup[] = [];
   const entitiesKeys = Object.keys(entities);
 
@@ -85,15 +84,21 @@ export function getGroupsFromMission(missionJSON: JsonObject): MissionGroup[] {
     }
 
     const entity = entities[key];
-    if (!isRecord(entity) || entity.dataType !== "Group") {
+    if (!isRecord(entity)) {
       continue;
     }
 
-    groups.push({
-      id: toId(entity.id),
-      side: toStringOrNull(entity.side) as Side,
-      units: getUnitsFromGroupEntity(toEntityMap(entity.Entities)),
-    });
+    if (entity.dataType === "Group") {
+      groups.push({
+        id: toId(entity.id),
+        side: toStringOrNull(entity.side) as Side,
+        units: getUnitsFromGroupEntity(toEntityMap(entity.Entities)),
+      });
+    }
+
+    if (entity.Entities) {
+      groups.push(...getGroupsFromEntities(toEntityMap(entity.Entities)));
+    }
   }
 
   return groups;

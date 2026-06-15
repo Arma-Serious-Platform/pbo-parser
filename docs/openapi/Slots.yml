@@ -12,7 +12,7 @@ http:
       - name: pbo
         type: file
         value:
-          - /home/agentos/dev/pbo-parser/docs/example/VTG_Kunduz_Chains_143_04.kunduz_valley.pbo
+          - /home/agentos/Downloads/VTG_Suchasna_Viyna_143_v01.gc_krayina.pbo
   auth: inherit
 
 settings:
