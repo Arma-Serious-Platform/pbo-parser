@@ -278,7 +278,8 @@ export class PboService {
   }
 
   private normalizeParse2JsonOutput(raw: string): string {
-    return raw.replace(/\uFEFF/g, "").replace(/^\{\/{10,}/, "{");
+    const normalized = raw.replace(/\uFEFF/g, "").replace(/^\{\/{10,}/, "{");
+    return escapeJsonStringControlCharacters(normalized);
   }
 
   private scheduleTempFolderCleanup(folderPath: string): void {
@@ -291,5 +292,64 @@ export class PboService {
         // Ignore cleanup errors to avoid impacting requests.
       });
     }, this.clearTimeoutMs);
+  }
+}
+
+function escapeJsonStringControlCharacters(value: string): string {
+  let result = "";
+  let inString = false;
+  let escaped = false;
+
+  for (const char of value) {
+    if (!inString) {
+      result += char;
+      if (char === '"') {
+        inString = true;
+      }
+      continue;
+    }
+
+    if (escaped) {
+      result += char;
+      escaped = false;
+      continue;
+    }
+
+    if (char === "\\") {
+      result += char;
+      escaped = true;
+      continue;
+    }
+
+    if (char === '"') {
+      result += char;
+      inString = false;
+      continue;
+    }
+
+    result += escapeJsonControlCharacter(char);
+  }
+
+  return result;
+}
+
+function escapeJsonControlCharacter(char: string): string {
+  switch (char) {
+    case "\b":
+      return "\\b";
+    case "\f":
+      return "\\f";
+    case "\n":
+      return "\\n";
+    case "\r":
+      return "\\r";
+    case "\t":
+      return "\\t";
+    default: {
+      const code = char.charCodeAt(0);
+      return code < 0x20
+        ? `\\u${code.toString(16).padStart(4, "0")}`
+        : char;
+    }
   }
 }
